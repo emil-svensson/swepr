@@ -48,6 +48,7 @@ elif language_mode_dict[language_mode] == 1:
 
 
 
+
 def initialize_reset_app(type='hard'):
     if type == 'hard':
         used_words = []
@@ -136,6 +137,8 @@ def check_clear_answer_update_q():
 col1, col2 = st.columns(2)
 
 with col1:
+    
+
 
     if (st.button('Start/reset')) | (st.session_state.counter == 0):
         used_words, smessage = initialize_reset_app()
@@ -147,6 +150,15 @@ with col1:
         st.write(smessage)
     except NameError:
         pass
+
+    st.write('''<style>
+
+    [data-testid="column"] {
+        width: calc(50% - 1rem) !important;
+        flex:  1 calc(50% - 1rem) !important;
+        min-width: calc(50% - 1rem) !important;
+    }
+    </style>''', unsafe_allow_html=True)
 
 
 with col2:
@@ -168,7 +180,14 @@ with col2:
 
         st.session_state.user_text_inp1_temp = 'Awaiting answer'
 
+    st.write('''<style>
 
+    [data-testid="column"] {
+        width: calc(50% - 1rem) !important;
+        flex:  1 calc(50% - 1rem) !important;
+        min-width: calc(50% - 1rem) !important;
+    }
+    </style>''', unsafe_allow_html=True)
 
 
 
