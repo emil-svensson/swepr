@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import random
 
+import re
+from collections import Counter
+import math
+
 
 
 if 'counter' not in st.session_state:
@@ -32,8 +36,8 @@ st.title("🌈 SWEPR 🐢")
 df = pd.read_excel('swedish_words_practice.xlsx')
 
 
-language_mode_dict = {'from English':0, 'from Swedish':1}
-language_mode = st.radio('Translate...', language_mode_dict.keys(), horizontal=True)
+language_mode_dict = {'English':0, 'Swedish':1}
+language_mode = st.radio('Translate from...', language_mode_dict.keys(), horizontal=True)
 
 
 if language_mode_dict[language_mode] == 0:
@@ -133,6 +137,113 @@ def check_clear_answer_update_q():
     st.session_state.active_q = True
 
 
+def answer_score(w_true, w_answer):
+    true_w_vec = Counter(re.compile(r"\w").findall(w_true))
+    answer_w_vec = Counter(re.compile(r"\w").findall(w_answer))
+
+    intersection = set(true_w_vec.keys()) & set(answer_w_vec.keys())
+    numerator = sum([true_w_vec[x] * answer_w_vec[x] for x in intersection])
+
+    sum1 = sum([true_w_vec[x] ** 2 for x in list(true_w_vec.keys())])
+    sum2 = sum([answer_w_vec[x] ** 2 for x in list(answer_w_vec.keys())])
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+
+
+    if not denominator:
+        return '0'
+    else:
+        score = str(100*round((float(numerator)/denominator), 2))
+        return score
+    
+
+def answer_clue(w_true, w_answer):
+    # print(f"true: {w_true}")
+    # print(f"uinput: {w_answer}")
+
+    if (w_answer == "Awaiting answer") or (w_answer == ""):
+        return "You gotta take a shot first. Type something."
+
+    w_out = []
+    wt_letter_idx = 0
+    wa_letter_idxs_list = [list(range(len(w_answer))) for i in range(len(w_answer))]
+
+    while True:
+        if wt_letter_idx == len(w_true):
+            break # all output slots should be filled
+        
+        try: # if w_true has more letters than w_answer we'll get an index error
+            wa_letter_idxs = wa_letter_idxs_list[wt_letter_idx]
+
+        except IndexError:
+            wa_letter_idxs = wa_letter_idxs_list[0]
+            wa_letter_idxs = [] # don't match more stuff if the user input (w_answer) is longer than w_true
+            # letter = None
+            # pass
+
+        try:
+            if match:
+                wa_letter_idxs = [wa_letter_idx + 1] # if the last letter was a match, only check the next letter
+        except NameError:
+            match = False
+
+
+        for wa_letter_idx in wa_letter_idxs:
+            
+            try:
+                # print(f"a:{wa_letter_idx}, t:{wt_letter_idx}")
+                if w_answer[wa_letter_idx] == w_true[wt_letter_idx]:
+
+                    letter = w_true[wt_letter_idx]
+
+                    # special case to make sure the last letter of the words, in fact, match
+                    if (wt_letter_idx == len(w_true)-1) and (w_true[-1] != w_answer[-1]):
+                        letter = None
+                    break
+                else:
+                    letter = None
+
+            except IndexError:
+                pass
+
+            if wt_letter_idx == 0: # this clause is only used if the first letters don't match
+                letter = None
+                # the list of indices is sliced so that the first letter in w_answer can't be referenced again
+                wa_letter_idxs_list = [wa_letter_idxs_list[i][1::] for i in range(len(wa_letter_idxs_list))] # the list of indices is sliv
+                break # break if the first letters don't match
+
+
+        if letter is not None:
+            w_out.append(letter)
+            match = True
+            letter = None
+        else:
+            match = False
+            if wt_letter_idx > 0:
+                try:
+                    w_out[-1].rstrip()
+                except IndexError:
+                    pass
+                w_out.append(" _ ")
+            else:
+                w_out.append("_ ")
+            
+        wt_letter_idx += 1
+        # print(w_out)
+
+
+    if (" _ " not in w_out) and ("_ " not in w_out):
+        ind = np.random.choice(np.arange(len(w_out)))
+        if ind == 0:
+            w_out[0] = "_ "
+        else:
+            w_out[ind] = " _ "
+    
+
+    w_out = "".join(map(str, w_out))
+
+    return w_out
+
+
 
 col1, col2 = st.columns(2)
 
@@ -146,11 +257,6 @@ with col1:
         used_words = st.session_state.used_words
 
 
-    try:
-        st.write(smessage)
-    except NameError:
-        pass
-
     st.write('''<style>
 
     [data-testid="column"] {
@@ -159,6 +265,7 @@ with col1:
         min-width: calc(50% - 1rem) !important;
     }
     </style>''', unsafe_allow_html=True)
+
 
 
 with col2:
@@ -191,11 +298,20 @@ with col2:
 
 
 
+try:
+    st.write(smessage)
+except NameError:
+    pass
+
+
+
+
 if st.session_state.active_q | (st.session_state.user_text_inp1_temp == 'Awaiting answer'):
     
     temp_string = st.session_state.next_word[col_from].iloc[0]
-    st.markdown(f"Translate **{temp_string}** {to_language}")
-    st.text_input('Type here:', key='user_text_inp1', on_change=check_clear_answer_update_q)
+    st.markdown(f"## {temp_string}")
+    # st.markdown(f"Translate **{temp_string}** {to_language}")
+    st.text_input(f"translate the word above {to_language}:", key='user_text_inp1', on_change=check_clear_answer_update_q)
 
 
     if st.session_state.user_text_inp1_temp != 'Awaiting answer':
@@ -204,12 +320,22 @@ if st.session_state.active_q | (st.session_state.user_text_inp1_temp == 'Awaitin
         st.write(f'Your answer:')
 
 
-    if st.session_state.user_text_inp1_temp.lower() == st.session_state.current_word[col_to].iloc[0].lower():
+    w_true = st.session_state.next_word[col_to].iloc[0]
+    w_answer = st.session_state.user_text_inp1_temp
+
+    if w_answer.lower() == st.session_state.current_word[col_to].iloc[0].lower():
         st.markdown(f"**{success_message()}**")
         initialize_reset_app(type='soft')
-        
-    elif st.session_state.user_text_inp1_temp != 'Awaiting answer':
-        st.write('Nope, try again')
+    
+    elif w_answer != 'Awaiting answer':
+        st.write(f"Nope, try again. Attempt score: {answer_score(w_true.lower(), w_answer.lower())}%")
+
+
+    with st.expander("click me for a clue", expanded=False):
+        st.write(f"{answer_clue(st.session_state.next_word[col_to].iloc[0], st.session_state.user_text_inp1_temp)}")
+
+    with st.expander("click me to see the correct answer", expanded=False):
+        st.write(st.session_state.next_word[col_to].iloc[0].lower())
 
 
 
