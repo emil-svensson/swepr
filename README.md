@@ -1,5 +1,6 @@
 # 🌈 SWEPR 🐢
-Swedish word practice
+Swedish word/vocabulary practice
 
-Under (slow) development
-https://emil-svensson-swepr-app-srwvq6.streamlit.app/
+*  Layout intended for use on a smartphone
+*  Under (slow) development
+*  https://emil-svensson-swepr-app-srwvq6.streamlit.app/
