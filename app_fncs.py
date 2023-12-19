@@ -1,9 +1,19 @@
 import streamlit as st
+import pandas as pd
 import random
 import math
 import re
 import numpy as np
 from collections import Counter
+
+
+@st.cache_data
+def load_data():
+    df1 = pd.read_excel('swedish_words_practice.xlsx', sheet_name='nouns')
+    df2 = pd.read_excel('swedish_words_practice.xlsx', sheet_name='verbs')
+    df = pd.concat([pd.concat([pd.Series(['noun']*len(df1), name='type'), df1], axis=1),
+                    pd.concat([pd.Series(['verb']*len(df2), name='type'), df2], axis=1)], axis=0).reset_index(drop=True)
+    return df
 
 
 
@@ -20,6 +30,7 @@ def initialize_reset_app(st_ss, type='hard'):
         'user_input_adj': '',
         'current_word_idx': dict(zip(word_classes, [None]*len(word_classes))),
         'previous_word_idx': dict(zip(word_classes, [None]*len(word_classes))),
+        'number_of_words_left': dict(zip(word_classes, [-1]*len(word_classes))),
         'stored_user_input': dict(zip(word_classes, ['']*len(word_classes))),
         'user_input_status': dict(zip(word_classes, ['']*len(word_classes))),}
 
@@ -36,8 +47,8 @@ def initialize_reset_app(st_ss, type='hard'):
             st_ss[param] = value
 
     elif type=='soft':
-        st.write('soft reset did nothing!')
-        st_ss.user_input_status = 'hallo'
+        # st.write('soft reset did nothing!')
+        st_ss.used_word_idxs = []
 
     return 
 
@@ -50,6 +61,7 @@ def new_word(df, st_ss, wclass):
     ## Only pick from indices not used in this session
     remaining_idxs = [val for val in df_temp.index if val not in st_ss.used_word_idxs]
     df_temp = df_temp[df_temp.index.isin(remaining_idxs)]
+    st_ss.number_of_words_left[wclass] = len(df_temp)-1
 
     if len(df_temp) > 0:
         ## Store current_word_idx  in previous_word_idx
@@ -62,12 +74,13 @@ def new_word(df, st_ss, wclass):
 
         ## Reset the stored usaer input
         st_ss.stored_user_input[wclass] = ""        
+
     else:
         initialize_reset_app(st_ss, type='soft')
         new_word(df, st_ss, wclass)
-        st.write('All words have been used. Resetting.')
 
-    return
+    return 
+    # return 'All words have been used. Resetting.'
 
 
 

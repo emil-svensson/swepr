@@ -5,8 +5,11 @@ from app_fncs import *
 
 ## Print the title at the tippy-top of the page
 # st.set_page_config(layout="wide")
+st.markdown("""<style> .block-container {padding-top: 0 !important} </style> """, unsafe_allow_html=True)
 st.title("🌈 SWEPR 🐢")
 
+
+df = load_data()
 
 ## Initialize the session state object only once and create the variable st_ss as a short-hand
 if 'dummy' not in st.session_state:
@@ -19,11 +22,6 @@ else:
 
 
 
-df1 = pd.read_excel('swedish_words_practice.xlsx', sheet_name='nouns')
-df2 = pd.read_excel('swedish_words_practice.xlsx', sheet_name='verbs')
-df = pd.concat([pd.concat([pd.Series(['noun']*len(df1), name='type'), df1], axis=1),
-                pd.concat([pd.Series(['verb']*len(df2), name='type'), df2], axis=1)], axis=0).reset_index(drop=True)
-
 
 ## Global setting for english -> swedish, or swedish -> english
 language_mode_dict = {'English':0, 'Swedish':1}
@@ -31,12 +29,19 @@ language_mode_dict = {'English':0, 'Swedish':1}
 col1, col2 = st.columns(2)
 with col1:
     language_mode = st.radio('Translate from...', language_mode_dict.keys(), horizontal=True, key="sel_language")
+    st.markdown('''<style> [data-testid="column"] 
+                    {width: calc(50% - 1rem) !important;
+                     flex:  1 calc(50% - 1rem) !important;
+                     min-width: calc(50% - 1rem) !important;} </style>''', unsafe_allow_html=True)
+
 with col2:
-    st.markdown("""<style> .block-container {padding-top: 20 !important;} </style> """,
-        unsafe_allow_html=True)
+    st.markdown("""<style> .block-container {padding-top: 20 !important} </style> """, unsafe_allow_html=True)
+    st.markdown('''<style> [data-testid="column"] 
+                {width: calc(50% - 1rem) !important;
+                    flex:  1 calc(50% - 1rem) !important;
+                    min-width: calc(50% - 1rem) !important;} </style>''', unsafe_allow_html=True)
     if st.button('Reset'):
         initialize_reset_app(st_ss)
-    
 
 
 global col_from, col_to, to_language
@@ -94,13 +99,23 @@ def process_user_input():
 
 
 def user_facing_stuff(word_class):
+
     col_1a, col_2a = st.columns(2)
+    
     with col_2a:
         st.markdown("""<style> .block-container {padding-top:  !important;} </style> """,
             unsafe_allow_html=True)
-        if st.button(f'Randomize new {word_class}'):
+        
+        ## After the button has been pressed once, show the remaining number of words
+        if st_ss.number_of_words_left[word_class] < 0:
+            button_text = f'New {word_class}'
+        else:
+            button_text = f'New {word_class} ({st_ss.number_of_words_left[word_class]})'
+        if st.button(button_text):
             new_word(df, st_ss, word_class)
             st_ss.user_input_status[word_class] = 'Awaiting answer'
+            st.rerun()
+    
     with col_1a:
         if st_ss.current_word_idx[word_class] is not None:
             current_word = df.loc[st_ss.current_word_idx[word_class], language_keys[0]]
@@ -129,7 +144,7 @@ def user_facing_stuff(word_class):
         ## Print success message if answer is correct
         elif st_ss.user_input_status[word_class] == 'Correct answer':
             st.markdown(f"**{success_message()}**")
-        
+    return
 
 
 
@@ -141,11 +156,15 @@ with tab1:
     word_class='noun'
     user_facing_stuff(word_class)
 
-
 # Verbs
 with tab2:
     word_class='verb'
     user_facing_stuff(word_class)
 
+# try:
+#     if msg is not None:
+#         st.write(msg)
+# except:
+#     pass
 
 st_ss.counter += 1
