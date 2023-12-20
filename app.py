@@ -101,7 +101,7 @@ def process_user_input():
 def user_facing_stuff(word_class):
 
     col_1a, col_2a = st.columns(2)
-    
+
     with col_2a:
         st.markdown("""<style> .block-container {padding-top:  !important;} </style> """,
             unsafe_allow_html=True)
@@ -134,10 +134,10 @@ def user_facing_stuff(word_class):
 
             w_answer = st_ss.stored_user_input[word_class].lower()
             w_true = df.loc[st_ss.current_word_idx[word_class], language_keys[1]].lower()
-            st.write(f"Nope, try again. (Your answer was '{w_answer}' and scored {answer_score(w_true, w_answer)}%")
+            st.write(f"Nope, try again. (Your answer was '{w_answer}' and scored {answer_score(w_true, w_answer)})")
             
             with st.expander("Show correct letters", expanded=False):
-                st.write(f"{answer_clue(w_true, w_answer)}")
+                st.write(f"{get_correct_letters(w_true, w_answer)}")
             with st.expander("Show desired answer", expanded=False):
                 st.write(w_true.lower())
 

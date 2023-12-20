@@ -85,22 +85,48 @@ def new_word(df, st_ss, wclass):
 
 
 def answer_score(w_true, w_answer):
-    true_w_vec = Counter(re.compile(r"\w").findall(w_true))
-    answer_w_vec = Counter(re.compile(r"\w").findall(w_answer))
 
-    intersection = set(true_w_vec.keys()) & set(answer_w_vec.keys())
-    numerator = sum([true_w_vec[x] * answer_w_vec[x] for x in intersection])
+    def cosine_sim(w_true=w_true, w_answer=w_answer):
+        re_match_string = r"(?!\d)\w"
+        true_w_vec = Counter(re.compile(re_match_string).findall(w_true))
+        answer_w_vec = Counter(re.compile(re_match_string).findall(w_answer))
 
-    sum1 = sum([true_w_vec[x] ** 2 for x in list(true_w_vec.keys())])
-    sum2 = sum([answer_w_vec[x] ** 2 for x in list(answer_w_vec.keys())])
-    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+        intersecting_chars = set(true_w_vec.keys()) & set(answer_w_vec.keys())
+        numerator = sum([true_w_vec[x] * answer_w_vec[x] for x in intersecting_chars])
+
+        sum1 = sum([true_w_vec[x] ** 2 for x in list(true_w_vec.keys())])
+        sum2 = sum([answer_w_vec[x] ** 2 for x in list(answer_w_vec.keys())])
+        denominator = math.sqrt(sum1) * math.sqrt(sum2)
+
+        return numerator/denominator
 
 
-    if not denominator:
-        return '0'
-    else:
-        score = str(100*round((float(numerator)/denominator), 2))
-        return score
+    def levenshtein(s=w_true, t=w_answer):
+        ''' From Wikipedia article; Iterative with two matrix rows. '''
+        # Christopher P. Matthews
+        # christophermatthews1985@gmail.com
+        # Sacramento, CA, USA
+        if s == t: return 0
+        elif len(s) == 0: return len(t)
+        elif len(t) == 0: return len(s)
+        v0 = [None] * (len(t) + 1)
+        v1 = [None] * (len(t) + 1)
+        for i in range(len(v0)):
+            v0[i] = i
+        for i in range(len(s)):
+            v1[0] = i + 1
+            for j in range(len(t)):
+                cost = 0 if s[i] == t[j] else 1
+                v1[j + 1] = min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost)
+            for j in range(len(v0)):
+                v0[j] = v1[j]
+                
+        return v1[len(t)]
+    
+    levenshtein_score = 1-levenshtein()/len(w_true)
+    composite_score = max(0, 0.2*cosine_sim()+0.8*levenshtein_score)
+    
+    return str(100*round(composite_score, 2))+'%'
 
 
 def success_message():
@@ -114,7 +140,7 @@ def success_message():
 
 
 
-def answer_clue(w_true, w_answer):
+def get_correct_letters(w_true, w_answer):
     w_out = []
     wt_letter_idx = 0
     wa_letter_idxs_list = [list(range(len(w_answer))) for i in range(len(w_answer))]
